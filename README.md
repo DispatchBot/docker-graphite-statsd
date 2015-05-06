@@ -1,21 +1,17 @@
-[![Gratipay](http://img.shields.io/gratipay/hopsoft.svg?style=flat)](https://gratipay.com/hopsoft/)
+# Based on: https://github.com/hopsoft/docker-graphite-statsd many thanks!
 
-# Docker Image for Graphite & Statsd
+# Docker Image for Graphite & Statsd & Grafana
 
-## Get Graphite & Statsd running instantly
+## Get Graphite & Statsd & Grafana running instantly
 
-Graphite & Statsd can be complex to setup.
+Graphite & Statsd & Grafana can be complex to setup.
 This image will have you running & collecting stats in just a few minutes.
 
 ## Quick Start
 
 ```sh
-sudo docker run -d \
-  --name graphite \
-  -p 80:80 \
-  -p 2003:2003 \
-  -p 8125:8125/udp \
-  hopsoft/graphite-statsd
+sudo docker build -t graphite .
+sudo docker run -d --name graphite --net host graphite
 ```
 
 This starts a Docker container named: **graphite**
@@ -24,29 +20,27 @@ That's it, you're done ... almost.
 
 ### Includes the following components
 
-* [Nginx](http://nginx.org/) - reverse proxies the graphite dashboard
-* [Graphite](http://graphite.readthedocs.org/en/latest/) - front-end dashboard
-* [Carbon](http://graphite.readthedocs.org/en/latest/carbon-daemons.html) - back-end
+* [Nginx](http://nginx.org/) - reverse proxies the grafana & graphite dashboards
+* [Grafana](http://grafana.org/) - nicer graphing dashboard
+* [Graphite](http://graphite.readthedocs.org/en/latest/) - graphite native dashboard
+* [Carbon](http://graphite.readthedocs.org/en/latest/carbon-daemons.html) - graphite back-end
 * [Statsd](https://github.com/etsy/statsd/wiki) - UDP based back-end proxy
 
-### Mapped Ports
+### Mapped Ports (when start with --net host)
 
-| Host | Container | Service |
-| ---- | --------- | ------- |
-|   80 |        80 | nginx   |
-| 2003 |      2003 | carbon  |
-| 8125 |      8125 | statsd  |
+| Host | Container |     Service    |
+| ---- | --------- | -------------- |
+|   80 |        80 | nginx/grafana  |
+|   81 |        81 | nginx/graphite |
+| 2003 |      2003 | carbon         |
+| 8125 |      8125 | statsd         |
 
-### Mounted Volumes
+### Recommended volumes:
 
-| Host              | Container                  | Notes              |
-| ----------------- | -------------------------- | -------------------|
-| DOCKER ASSIGNED   | /etc/nginx                 | nginx config       |
-| DOCKER ASSIGNED   | /opt/statsd                | statsd config      |
-| DOCKER ASSIGNED   | /etc/logrotate.d           | logrotate config   |
-| DOCKER ASSIGNED   | /opt/graphite/conf         | graphite config    |
-| DOCKER ASSIGNED   | /opt/graphite/storage      | graphite storage   |
-| DOCKER ASSIGNED   | /var/log                   | log files   |
+    grafana/dashboards:/opt/grafana/app/dashboards
+    graphite/config:/opt/graphite/conf
+    graphite/storage:/opt/graphite/storage
+    logs:/var/log
 
 ### Base Image
 
@@ -71,7 +65,19 @@ done
 
 ### Visualize the Data
 
-Open Graphite in a browser at [http://localhost/dashboard](http://localhost/dashboard).
+Open Grafana in a browser at [http://localhost](http://localhost).
+Open Graphite in a browser at [http://localhost:81](http://localhost:81).
+
+### How to edit or create grafana dashboards
+
+Elastic search is not installed in this image, 
+hence the dashboards are to be created or updated, 
+then exported as JSON files.  Base on the default dashboard 
+http://localhost/#/dashboard/file/default.json for example, 
+add/update the graphs, then export to mydashboard.json for instance, 
+save it in the directory which is mounted to /opt/grafana/app/dashboards in the container. 
+Open http://localhost/#/dashboard/file/mydashboard.json in a browser to view the new dashboard.
+
 
 ## Secure the Django Admin
 
@@ -79,7 +85,7 @@ Update the default Django admin user account. _The default is insecure._
 
   * username: root
   * password: root
-  * email: root.graphite@mailinator.com
+  * email: admin@admin.com
 
 First login at: [http://localhost/account/login](http://localhost/account/login)
 Then update the root user's profile at: [http://localhost/admin/auth/user/1/](http://localhost/admin/auth/user/1/)
@@ -127,12 +133,10 @@ you should consider mounting `/opt/graphite/storage` & `/var/log` on a larger vo
     ```
     sudo docker run -d \
       --name graphite \
+      --net host
       -v /path/to/ebs/graphite:/opt/graphite/storage \
       -v /path/to/ebs/log:/var/log \
-      -p 80:80 \
-      -p 2003:2003 \
-      -p 8125:8125/udp \
-      hopsoft/graphite-statsd
+      docker-graphite-statsd
     ```
 
 ## Additional Reading
@@ -142,21 +146,3 @@ you should consider mounting `/opt/graphite/storage` & `/var/log` on a larger vo
 * [Practical Guide to StatsD/Graphite Monitoring](http://matt.aimonetti.net/posts/2013/06/26/practical-guide-to-graphite-monitoring/)
 * [Configuring Graphite for StatsD](https://github.com/etsy/statsd/blob/master/docs/graphite.md)
 
-## Contributors
-
-Build the image yourself.
-
-### OSX
-
-1. `git clone https://github.com/hopsoft/docker-graphite-statsd.git`
-1. `cd docker-graphite-statsd`
-1. `vagrant up`
-1. `vagrant ssh`
-1. `sudo docker build -t hopsoft/graphite-statsd /vagrant`
-
-**Note**: Pay attention to the forwarded ports in the [Vagrantfile](https://github.com/hopsoft/docker-graphite-statsd/blob/master/Vagrantfile).
-
-### Linux
-
-1. `git clone https://github.com/hopsoft/docker-graphite-statsd.git`
-1. `sudo docker build -t hopsoft/graphite-statsd ./docker-graphite-statsd`
